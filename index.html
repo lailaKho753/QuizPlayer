@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizPlayer - Import Questions from AI</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-top: 0; }
+        textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            font-family: monospace; 
+            font-size: 14px;
+            resize: vertical;
+        }
+        button { 
+            background: #0066cc; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            margin-top: 10px;
+        }
+        button:hover { background: #0052a3; }
+        .question { 
+            background: #f9f9f9; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 12px; 
+            border-left: 4px solid #0066cc;
+        }
+        .options { margin: 15px 0; }
+        .options label { 
+            display: block; 
+            margin: 8px 0; 
+            cursor: pointer; 
+            padding: 8px; 
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .options label:hover { background: #e8f0fe; }
+        .submit-btn { background: #28a745; font-size: 18px; padding: 15px 30px; margin-top: 30px; width: 100%; }
+        .result { background: #e8f5e9; padding: 20px; border-radius: 12px; margin-top: 30px; }
+        .correct { color: #28a745; font-weight: bold; }
+        .wrong { color: #dc3545; }
+        .explanation { background: #fff3cd; padding: 12px; border-radius: 8px; margin-top: 10px; }
+        .error { background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px; margin: 20px 0; }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 10px auto;
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #0066cc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 QuizPlayer</h1>
+        <p>Paste questions from AI (DeepSeek/ChatGPT) in this format:</p>
+        <pre>
+question: What is the reading of 駐車?
+answer: A
+explanation: 駐車 is read as ちゅうしゃ, meaning parking.
+
+question: What is the kanji for "むり"?
+answer: B
+explanation: むり is written as 無理.</pre>
+        
+        <textarea id="questionsInput" rows="10" placeholder="Paste your questions here..."></textarea>
+        <button onclick="parseQuiz()">📚 Generate Quiz</button>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div>Processing questions...</div>
+        </div>
+        <div id="quizArea"></div>
+    </div>
+
+    <script>
+        let currentQuestions = [];
+        
+        async function parseQuiz() {
+            const questionsText = document.getElementById('questionsInput').value;
+            if (!questionsText.trim()) {
+                alert('Please enter questions first!');
+                return;
+            }
+            
+            const loadingDiv = document.getElementById('loading');
+            const quizArea = document.getElementById('quizArea');
+            
+            loadingDiv.style.display = 'block';
+            quizArea.innerHTML = '';
+            
+            try {
+                const formData = new FormData();
+                formData.append('questions_text', questionsText);
+                
+                const response = await fetch('/api/parse', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.questions && data.questions.length > 0) {
+                    currentQuestions = data.questions;
+                    displayQuestions(data.questions);
+                } else {
+                    quizArea.innerHTML = '<div class="error">❌ Failed to parse questions. Make sure format: question: ... answer: ... explanation: ...</div>';
+                }
+            } catch (error) {
+                quizArea.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+        
+        function displayQuestions(questions) {
+            let html = '<h2>📚 Questions:</h2>';
+            
+            questions.forEach((q, idx) => {
+                html += `
+                    <div class="question">
+                        <strong>Question ${idx + 1}:</strong> ${q.text}<br>
+                        <div class="options">
+                            ${q.options.map(opt => `
+                                <label>
+                                    <input type="radio" name="q${idx}" value="${opt.charAt(0)}" onchange="saveAnswer(${idx}, '${opt.charAt(0)}')">
+                                    ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `<button class="submit-btn" onclick="submitQuiz()">📊 Submit & View Score</button>`;
+            document.getElementById('quizArea').innerHTML = html;
+            window.userAnswers = {};
+        }
+        
+        function saveAnswer(questionId, answer) {
+            if (!window.userAnswers) window.userAnswers = {};
+            window.userAnswers[questionId] = answer;
+            console.log('Saved:', questionId, answer);
+        }
+        
+        async function submitQuiz() {
+            if (!currentQuestions.length) {
+                alert('No questions! Generate first.');
+                return;
+            }
+            
+            const submission = {
+                answers: window.userAnswers || {},
+                questions: currentQuestions
+            };
+            
+            const response = await fetch('/api/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(submission)
+            });
+            
+            const result = await response.json();
+            
+            let html = `<div class="result">
+                <h2>🎯 Quiz Results</h2>
+                <p style="font-size: 24px;"><strong>Score: ${result.score}/${result.total} (${result.percentage.toFixed(1)}%)</strong></p>
+            </div>`;
+            
+            result.questions.forEach((q, idx) => {
+                const userAns = result.userAnswers[idx] || '(not answered)';
+                const isCorrect = userAns === q.correct;
+                
+                html += `
+                    <div class="question">
+                        <strong>Question ${idx + 1}:</strong> ${q.text}<br>
+                        <div>Your answer: <span class="${isCorrect ? 'correct' : 'wrong'}">${userAns}</span></div>
+                        <div>Correct answer: <strong>${q.correct}</strong></div>
+                        <div class="explanation">
+                            <strong>💡 Explanation:</strong> ${q.explanation}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('quizArea').innerHTML = html;
+        }
+    </script>
+</body>
+</html>

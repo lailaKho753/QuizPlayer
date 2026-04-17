@@ -1,0 +1,15 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+QuizPlayer
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
