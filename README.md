@@ -1,31 +1,25 @@
-# 📝 QuizPlayer
+📝 QuizPlayer
+Import questions from AI (DeepSeek/ChatGPT), answer multiple choice questions, view scores and explanations.
 
-Import soal dari AI (DeepSeek/ChatGPT), jawab multiple choice, lihat score dan pembahasan.
+Features
+✅ Paste questions in the format question: ... answer: ... explanation: ...
+✅ Automatically generate quizzes with options A, B, C, D
+✅ Select answers, submit, and view your score
+✅ Display correct/incorrect answers + explanations
 
-## Fitur
+How to Use
+Ask AI to create questions in this format:
 
-- ✅ Paste soal dengan format `soal: ... jawaban: ... penjelasan: ...`
-- ✅ Otomatis generate quiz dengan option A,B,C,D
-- ✅ Pilih jawaban, submit, lihat score
-- ✅ Tampilkan jawaban benar/salah + penjelasan
+question: 捨てるの読み方は？
+options: A. おす, B. すてる, C. とぶ, D. しんじる
+answer: B
+explanation: 捨てるは「すてる」と読みます。to throw away（捨てる）という意味です。
 
-## Cara Pakai
+Click "Generate Quiz"
 
-1. Minta AI buat soal dengan format:
-soal: ...
-jawaban: A/B/C/D
-penjelasan: ...
+Answer the questions and submit
 
-text
-
-2. Copy-paste ke QuizPlayer
-
-3. Klik "Generate Quiz"
-
-4. Jawab soal dan submit
-
-## Jalankan
-
-```bash
+Run
+bash
 go run main.go
-Buka http://localhost:8080
+Open http://localhost:8080
